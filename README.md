@@ -1,2 +1,2 @@
 # lightweight-charts-nicegui
-Custom Lightweight-Charts Componenten für NiceGUI
+Custom Lightweight-Charts Component for NiceGUI
