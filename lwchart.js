@@ -9,41 +9,39 @@ export default {
     options: Object,
   },
   mounted() {
-
-	console.log(this.options)
 	
 	this.chart = LightweightCharts.createChart(this.$el, this.options.TimeChartOptions);
 	this.text_watermark = LightweightCharts.createTextWatermark(this.chart.panes()[0], {});
 	this.series = new Object();
+	this.watermarks = new Object();
 	
 	this.chart.subscribeClick(param => {		
-
-		/*if (!param.point) {
-			return;
-		}*/
 		
 		delete param.seriesData;
 		delete param.hoveredObjectId;
 		delete param.hoveredSeries;
-		
-		//param.value = this.series['main'].coordinateToPrice(param.point.y)
-		
-		//console.log(param.point)
 
 		this.$emit("click", param);
 	});			
     
-  },
-  methods: {
+	},
+	methods: {
 
-	addSeries(series_type, series_options) {
+	addSeries(series_type, series_options, pane_index) {
 	
 		const series_id = Object.keys(this.series).length
 		
 		console.debug("adding series with type/id", series_type, series_id)
 		
-  	 	this.series[series_id] = this.chart.addSeries(LightweightCharts[series_type], series_options);
+  	 	this.series[series_id] = this.chart.addSeries(LightweightCharts[series_type], series_options, pane_index);
 		return series_id;
+	},
+	createTextWatermark(pane_index, options) {
+	
+		const watermark_id = Object.keys(this.watermarks).length
+		
+		this.watermarks[watermark_id] = LightweightCharts.createTextWatermark(this.chart.panes()[pane_index], options)	
+		return watermark_id;
 	},
 	getPanes() {
 		return this.chart.panes().length;

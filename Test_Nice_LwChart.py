@@ -2,16 +2,9 @@
 
 import asyncio
 
-from lwchart import LwChart, createTextWatermark
-#import test_nice_ui_components as uic
+from lwchart import LwChart
 import pandas as pd
 from nicegui import app, ui
-#import webview
-#from multiprocessing import Process, Queue
-#from nicegui.events import KeyEventArguments
-
-#import signal
-#import time
  
 chart_options = {
 	'TimeChartOptions' : {
@@ -42,11 +35,11 @@ chart_options = {
 		},
 		'rightPriceScale': {
 			'visible': True,
-			'borderColor': 'gray',#'#5eff33',
+			'borderColor': 'gray',
 		},
 		'timeScale': {
-			'borderColor': 'gray',#'#71649C',
-			'barSpacing': 12,
+			'borderColor': 'gray',
+			'barSpacing': 10,
 			'timeVisible': True,
 			'visible': True,					
 		},				
@@ -65,27 +58,52 @@ candlestick_series_options = {
 	'lastValueVisible': True,			
 }
 
+rsi_series_options = { 
+	'color': 'rgba(255,191,0, 1)',
+	'lineStyle': 0, 
+	'lineWidth': 1,
+	'lastValueVisible': True
+}
+
+
+watermark_options = {
+    'horzAlign': 'center',
+    'vertAlign': 'center',
+    'lines': [
+        {
+            'text': '',
+            'color': 'rgba(171, 71, 188, 0.5)',
+            'fontSize': 36,
+        },
+    ],
+}
+
 df = pd.read_csv("OHLC_Test_Minute_Data.csv")
+df = df.fillna('')
+
 df['time'] = df['date'].values.astype('datetime64[s]').astype('int64')
 data = df.to_dict('records')
 
 chart = None
 candlestick_series = None
 volume_series = None
+rsi_series = None
 
-def candlestick_apply_options():
+
+def candlestick_apply_colors():
 	candlestick_series.applyOptions({
 		 'upColor': 'red',
 		 'downColor': 'blue',
 	})
 			
 async def update():
-	global data, candlestick_series, volume_series
+	global data, candlestick_series, volume_series, rsi_series
 	
 	for d in data[0:50]:
-		#print(d)
+
 		candlestick_series.update(d)
 		volume_series.update({'time':d['time'], 'value': d['volume']})
+		rsi_series.update({'time':d['time'], 'value': d['rsi']})
 		
 		await asyncio.sleep(0.05)
 		
@@ -96,52 +114,19 @@ async def on_click(e):
 	
 	if 'point' not in e.args: return
 	
-	print("click params", e)
+	#print("click params", e)
 	
 	price = await candlestick_series.coordinateToPrice(e.args['point']['y'])
 
-	print("You clicked candle (time, price)", e.args['time'], price)
-
-def add_watermark(text):
-	
-	global chart
-
-	#panes = await chart.panes()
-	
-	#print(panes)
-	
-	chart.setTextWatermark({
-	    'horzAlign': 'center',
-	    'vertAlign': 'center',
-	    'lines': [
-	        {
-	            'text': text,
-	            'color': 'rgba(171, 71, 188, 0.5)',
-	            'fontSize': 24,
-	        },
-	    ],
-	}
-		
-		)
-	
-	'''
-	chart.createTextWatermark(0, {
-	    'horzAlign': 'center',
-	    'vertAlign': 'center',
-	    'lines': [
-	        {
-	            'text': text,
-	            'color': 'rgba(171, 71, 188, 0.5)',
-	            'fontSize': 24,
-	        },
-	    ],
-	})	
-	'''
+	if 'time' in e.args.keys():	
+		print("You clicked candle (time, price)", e.args['time'], price)
+	else:
+		print("You clicked price", price)
 
 @ui.page('/', title='Chart page')
 async def page():
 	
-	global chart, data, candlestick_series, volume_series
+	global chart, data, candlestick_series, volume_series, rsi_series
 			
 	# expand column to full page height
 	ui.query('.nicegui-content').classes('absolute-full')	
@@ -149,17 +134,20 @@ async def page():
 	with ui.column().classes('w-full h-full gap-1'):				
 		
 		chart = LwChart(chart_options, on_click=on_click).classes('w-full h-full min-w-[200px] min-h-[200px]')
+	
+		watermark = await chart.createTextWatermark(0, watermark_options)
 
-		ui.button('run update', on_click=update)
-		ui.button('series: applyOptions', on_click=candlestick_apply_options)
-		ui.button('add watermark', on_click=lambda: add_watermark('Watermark Example'))
-		ui.button('remove watermark', on_click=lambda: add_watermark(''))
-		ui.button('fit content', on_click=chart.fitContent)
+		with ui.button_group().classes('gap-1'):
+	
+			ui.button('run update', on_click=update)
+			ui.button('apply candlestick colors', on_click=candlestick_apply_colors)
+			ui.button('add watermark', on_click=lambda: watermark.setText('Watermark Example'))
+			ui.button('remove watermark', on_click=lambda: watermark.setText(''))
+			ui.button('fit content', on_click=chart.fitContent)
 		
-		ui.button('shutdown', on_click=app.shutdown)	
+		ui.button('shutdown', on_click=app.shutdown, color='red')	
 	
 	candlestick_series = await chart.addSeries('CandlestickSeries', candlestick_series_options)
-	candlestick_series.setData(data[0:100])
 
 	volume_series = await chart.addSeries('HistogramSeries',
 		{
@@ -170,7 +158,6 @@ async def page():
 		},
 		
 	)
-	volume_series.setData([{'time':d['time'], 'value': d['volume']} for d in data[0:100]])
 
 	volume_series.priceScale().applyOptions({
 		'scaleMargins': {
@@ -178,7 +165,18 @@ async def page():
 			'bottom': 0,
 		},
 	})
-			
+
+	rsi_series = await chart.addSeries('LineSeries', rsi_series_options, 1)
+	
+	panes = await chart.panes()
+	panes[0].setStretchFactor(0.8);
+	panes[1].setStretchFactor(0.2);
+	#panes[1].setHeight(100)
+
+	candlestick_series.setData(data[0:100])
+	volume_series.setData([{'time':d['time'], 'value': d['volume']} for d in data[0:100]])
+	rsi_series.setData([{'time':d['time'], 'value': d['rsi']} for d in data[0:100]])
+				
 	data = data[100:]
 				
 
