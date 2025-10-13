@@ -114,14 +114,21 @@ async def on_click(e):
 	
 	if 'point' not in e.args: return
 	
-	#print("click params", e)
-	
-	price = await candlestick_series.coordinateToPrice(e.args['point']['y'])
+	print("click params", e)
 
-	if 'time' in e.args.keys():	
-		print("You clicked candle (time, price)", e.args['time'], price)
+	if e.args['paneIndex'] == 0:	
+		value = await candlestick_series.coordinateToPrice(e.args['point']['y'])
+
+	elif e.args['paneIndex'] == 1:	
+		value = await rsi_series.coordinateToPrice(e.args['point']['y'])
+		
 	else:
-		print("You clicked price", price)
+		return
+	
+	if 'time' in e.args.keys():	
+		print("You clicked candle (time, value)", e.args['time'], value)
+	else:
+		print("You clicked value", value)
 
 @ui.page('/', title='Chart page')
 async def page():
@@ -175,7 +182,7 @@ async def page():
 
 	candlestick_series.setData(data[0:100])
 	volume_series.setData([{'time':d['time'], 'value': d['volume']} for d in data[0:100]])
-	rsi_series.setData([{'time':d['time'], 'value': d['rsi']} for d in data[0:100]])
+	rsi_series.setData([{'time':d['time'], 'value': d['rsi']} for d in data[0:100] if d['rsi'] != '' ])
 				
 	data = data[100:]
 				
