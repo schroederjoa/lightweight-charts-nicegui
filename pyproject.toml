@@ -1,0 +1,11 @@
+[project]
+name = "lightweight-charts-nicegui"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "nicegui>=3.0.4",
+    "pandas>=2.3.3",
+    "pywebview>=6.0",
+]
