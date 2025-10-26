@@ -14,6 +14,8 @@ export default {
 	this.text_watermark = LightweightCharts.createTextWatermark(this.chart.panes()[0], {});
 	this.series = new Object();
 	this.watermarks = new Object();
+	this.price_lines = new Object();
+	this.series_markers = new Object();
 	
 	this.chart.subscribeClick(param => {		
 		
@@ -36,6 +38,20 @@ export default {
   	 	this.series[series_id] = this.chart.addSeries(LightweightCharts[series_type], series_options, pane_index);
 		return series_id;
 	},
+	createPriceLine(series_id, line_options) {
+		const line_id = Object.keys(this.price_lines).length
+
+		this.price_lines[line_id] = this.series[series_id].createPriceLine(line_options)	
+		return line_id;
+			
+	},
+	createSeriesMarkers(series_id, options) {
+	
+		const series_markers_id = Object.keys(this.watermarks).length
+		
+		this.series_markers[series_markers_id] = LightweightCharts.createSeriesMarkers(this.series[series_id], options)	
+		return series_markers_id;
+	},	
 	createTextWatermark(pane_index, options) {
 	
 		const watermark_id = Object.keys(this.watermarks).length
@@ -45,6 +61,14 @@ export default {
 	},
 	getPanes() {
 		return this.chart.panes().length;
+	},
+	removePriceLine(series_id, line_id) {
+	
+		console.log(this.price_lines)
+		console.log(line_id)
+	
+		this.series[series_id].removePriceLine(this.price_lines[line_id]);
+		delete this.price_lines[line_id];
 	},
 	setTextWatermark(options) {
 		this.text_watermark.applyOptions( options );

@@ -7,3 +7,9 @@ This is only an example to test the concept and get feedback from the community,
 2. Run python Test_Nice_LwChart.py
 
 ![cover](/screenshot.png)
+
+Another example showing line and marker functions
+
+3. Run python Test_Nice_LwChart_Lines_Markers.py
+
+![cover](/screenshot2.png)
