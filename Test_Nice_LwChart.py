@@ -3,6 +3,8 @@
 import asyncio
 
 from lwchart import LwChart
+from lwchart_definitions import CrosshairMode, LineStyle, MismatchDirection
+
 import pandas as pd
 from nicegui import app, ui
  
@@ -21,11 +23,11 @@ chart_options = {
 			},
 		},
 		'grid': {
-			'vertLines': { 'color': '#808080', 'style': 1},
-			'horzLines': { 'color': '#808080', 'style': 1 },
+			'vertLines': { 'color': '#808080', 'style': LineStyle.Dotted },
+			'horzLines': { 'color': '#808080', 'style': LineStyle.Dotted },
 		},
 		'crosshair': {
-			'mode': 0, # normal mode
+			'mode': CrosshairMode.Normal,
 			'vertLine': {
 				'labelBackgroundColor': '#9B7DFF',
 			},
@@ -39,7 +41,8 @@ chart_options = {
 		},
 		'timeScale': {
 			'borderColor': 'gray',
-			'barSpacing': 10,
+			'barSpacing': 6,
+			'rightOffset': 10,
 			'timeVisible': True,
 			'visible': True,					
 		},				
@@ -130,6 +133,42 @@ async def on_click(e):
 	else:
 		print("You clicked value", value)
 
+
+async def on_crosshairmove(e):
+	global candlestick_series
+		
+	if 'logical' in e.args.keys():	
+		print("Crosshair moving over logical index", e.args['logical'])
+
+	# moving over pane 0 / cabdkestick series?
+	pane_index = e.args.get('paneIndex', -1)
+	if pane_index == 0:	
+	
+		if 'time' in e.args.keys():
+			data = await candlestick_series.dataByIndex(e.args['logical'])
+			print("Moving over OHLC", data)
+		else:
+			print("Moving outside of candle range")
+	
+
+async def on_dblclick(e):
+	
+	print("Double-Click", e)
+	
+async def getVisLogRange():
+	global chart
+
+	print(await chart.timeScale().getVisibleLogicalRange())
+
+
+async def reset():			
+	global chart, candlestick_series
+			
+	chart.timeScale().resetTimeScale()
+	candlestick_series.priceScale().applyOptions({ 'autoScale':True})		
+
+
+	
 @ui.page('/', title='Chart page')
 async def page():
 	
@@ -137,25 +176,40 @@ async def page():
 			
 	# expand column to full page height
 	ui.query('.nicegui-content').classes('absolute-full')	
-	
+
 	with ui.column().classes('w-full h-full gap-1'):				
 		
-		chart = LwChart(chart_options, on_click=on_click).classes('w-full h-full min-w-[200px] min-h-[200px]')
+		# '''on_crosshairmove=on_crosshairmove'''
+		chart = LwChart(chart_options, on_click=on_click, on_dblclick=on_dblclick, on_crosshairmove_tschange=on_crosshairmove).classes('w-full h-full min-w-[200px] min-h-[200px]')
 	
 		watermark = await chart.createTextWatermark(0, watermark_options)
 
-		with ui.button_group().classes('gap-1'):
+		with ui.grid(columns=4).classes('gap-1'):
 	
 			ui.button('run update', on_click=update)
-			ui.button('apply candlestick colors', on_click=candlestick_apply_colors)
-			ui.button('add watermark', on_click=lambda: watermark.setText('Watermark Example'))
-			ui.button('remove watermark', on_click=lambda: watermark.setText(''))
-			ui.button('fit content', on_click=chart.fitContent)
-		
+			ui.button('apply Candlestick Colors', on_click=candlestick_apply_colors)
+			ui.button('add Watermark', on_click=lambda: watermark.setText('Watermark Example'))
+			ui.button('remove Watermark', on_click=lambda: watermark.setText(''))
+			
+			ui.button('fitContent', on_click=chart.timeScale().fitContent)
+			ui.button('reset', on_click=reset)
+			ui.button('scrollToPosition 20', on_click=lambda: chart.timeScale().scrollToPosition(20, False))
+			ui.button('set VisLogRange 0-100', on_click=lambda: chart.timeScale().setVisibleLogicalRange({ 'from': 0, 'to': 100}))
+			ui.button('get VisLogRange', on_click=getVisLogRange)
+			
+	
 		ui.button('shutdown', on_click=app.shutdown, color='red')	
 	
 	candlestick_series = await chart.addSeries('CandlestickSeries', candlestick_series_options)
 
+	candlestick_series.priceScale().applyOptions({
+		'autoScale': True,
+		'scaleMargins': {
+			'top': 0.1,
+			'bottom': 0.2,
+		},
+	})
+	
 	volume_series = await chart.addSeries('HistogramSeries',
 		{
 			'priceFormat': {
@@ -174,7 +228,7 @@ async def page():
 	})
 
 	rsi_series = await chart.addSeries('LineSeries', rsi_series_options, 1)
-	
+		
 	panes = await chart.panes()
 	panes[0].setStretchFactor(0.8);
 	panes[1].setStretchFactor(0.2);
@@ -183,7 +237,7 @@ async def page():
 	candlestick_series.setData(data[0:100])
 	volume_series.setData([{'time':d['time'], 'value': d['volume']} for d in data[0:100]])
 	rsi_series.setData([{'time':d['time'], 'value': d['rsi']} for d in data[0:100] if d['rsi'] != '' ])
-				
+					
 	data = data[100:]
 				
 

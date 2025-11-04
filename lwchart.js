@@ -17,6 +17,8 @@ export default {
 	this.price_lines = new Object();
 	this.series_markers = new Object();
 	
+	this.crosshairmove_last_time = null;
+	
 	this.chart.subscribeClick(param => {		
 		
 		delete param.seriesData;
@@ -25,7 +27,29 @@ export default {
 
 		this.$emit("click", param);
 	});			
-    
+
+	this.chart.subscribeDblClick(param => {		
+		
+		delete param.seriesData;
+		delete param.hoveredObjectId;
+		delete param.hoveredSeries;
+
+		this.$emit("dblclick", param);
+	});	
+  
+	this.chart.subscribeCrosshairMove(param => {		
+		
+		delete param.seriesData;
+		delete param.hoveredObjectId;
+		delete param.hoveredSeries;
+		
+		if (param.time != this.crosshairmove_last_time) {
+			this.$emit("crosshairmove_tschange", param);
+			this.crosshairmove_last_time = param.time;
+		}
+
+		this.$emit("crosshairmove", param);
+	});	  
 	},
 	methods: {
 
@@ -37,6 +61,9 @@ export default {
 		
   	 	this.series[series_id] = this.chart.addSeries(LightweightCharts[series_type], series_options, pane_index);
 		return series_id;
+	},
+	applyOptionsPriceLine(line_id, options) {
+		this.price_lines[line_id].applyOptions(options);
 	},
 	createPriceLine(series_id, line_options) {
 		const line_id = Object.keys(this.price_lines).length
@@ -64,8 +91,8 @@ export default {
 	},
 	removePriceLine(series_id, line_id) {
 	
-		console.log(this.price_lines)
-		console.log(line_id)
+		//console.log(this.price_lines)
+		//console.log(line_id)
 	
 		this.series[series_id].removePriceLine(this.price_lines[line_id]);
 		delete this.price_lines[line_id];
