@@ -1,19 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import asyncio
 from lwchart import LwChart
-from lwchart_definitions import CrosshairMode, LineStyle, MismatchDirection
 
-from nicegui import app, ui
- 
-chart_options = {
-	'TimeChartOptions' : {
-		'autoSize': True,
-		'layout': {
-			'attributionLogo': False,
-		},				
-	}		
-}
+from nicegui import ui
+
 
 cs_data = [
     { 'time': '2018-12-22', 'open': 75.16, 'high': 82.84, 'low': 36.16, 'close': 45.72 },
@@ -26,57 +16,48 @@ cs_data = [
     { 'time': '2018-12-29', 'open': 131.33, 'high': 151.17, 'low': 77.68, 'close': 96.43 },
     { 'time': '2018-12-30', 'open': 106.33, 'high': 110.20, 'low': 90.39, 'close': 98.10 },
     { 'time': '2018-12-31', 'open': 109.87, 'high': 114.69, 'low': 85.66, 'close': 111.26 },
-]
-
-candlestick_series_options = {
-	'priceScaleId': 'right', 
-	'upColor': '#5aaf55',
-	'downColor': '#cb2d2e',
-	'borderUpColor': '#5aaf55',
-	'borderDownColor': '#cb2d2e',			
-	'wickUpColor': '#5aaf55',
-	'wickDownColor': '#cb2d2e',	
-	'priceLineVisible': True,
-	'lastValueVisible': True,			
-}
+]			
+			
 	
 @ui.page('/', title='Chart page')
 async def page():
+	
+	controls = []
+	
+	def on_handle_key(e):
+
+		if e.action.keyup and not e.action.repeat:
+			
+			if e.key == 's':
+				[c.set_visibility(True) for c in controls]
+
+			if e.key == 'h':
+				[c.set_visibility(False) for c in controls]
 				
+	ui.keyboard(on_key=on_handle_key)
+
 	# expand column to full page height
 	ui.query('.nicegui-content').classes('absolute-full')
 
 	num_charts = 6
 	
-	
 	######################################################################################
-	# this sets the chart height correctly and stretches + shrinks
+	# shrink works with ui.element() and overflow-hidden class
 	######################################################################################
-	
-	with ui.grid(columns=3).classes('w-full h-full gap-1'):
 
-		for i in range(num_charts):
+	controls.append(ui.label("Placeholder for layout control"))
+	
+	with ui.grid(columns=3).classes('w-full h-[calc(100vh-2rem)] gap-0'):
+
+		for _ in range(num_charts):
 			
-			chart = LwChart(chart_options).classes('w-full h-full min-w-[200px] min-h-[200px]')
+			with ui.element().classes('w-full h-full overflow-hidden'):
+				
+				controls.append(ui.label("Placeholder for chart control"))
+				chart = LwChart({'TimeChartOptions' : {'autoSize': True}}).classes('w-full h-[calc(50vh-3rem)] min-w-[200px] min-h-[200px]')
 			
 			candlestick_series = await chart.addSeries('CandlestickSeries', {})
 			candlestick_series.setData(cs_data)
-	
-	'''
-	######################################################################################
-	# this stretches, but does not shrink the chart height anymore
-	######################################################################################
-	
-	with ui.grid(columns=3).classes('w-full h-full gap-1'):
 
-		for i in range(num_charts):
-			
-			with ui.column().classes('w-full h-full gap-1'):
-				ui.label("Placeholder for control element")
-				chart = LwChart(chart_options).classes('w-full h-full min-w-[200px] min-h-[200px]')
-			
-			candlestick_series = await chart.addSeries('CandlestickSeries', candlestick_series_options)
-			candlestick_series.setData(cs_data)
-	'''	
 								
 ui.run(native=True)
